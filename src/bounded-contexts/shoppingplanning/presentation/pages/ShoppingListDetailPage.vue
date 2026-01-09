@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeftIcon, FunnelIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, Bars3BottomLeftIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
 import { useShoppingPlanningStore } from '../stores/shoppingPlanningStore'
 import type { ListItemViewModel } from '../view-models/shoppingListViewModels'
 import ShoppingListItemCard from '../components/ShoppingListItemCard.vue'
@@ -306,7 +306,7 @@ const openEditStorePicker = () => {
       </div>
       <button type="button" class="btn btn-ghost btn-circle btn-sm text-base-content/50" aria-label="Sort / Filter"
         @click="() => changeSort(store.activeSort)">
-        <FunnelIcon class="h-5 w-5" />
+        <Bars3BottomLeftIcon class="h-5 w-5" />
       </button>
     </div>
 
@@ -344,15 +344,9 @@ const openEditStorePicker = () => {
     </div>
   </section>
 
-  <EditItemDialog
-    v-model:visible="editState.visible"
-    v-model:state="editState"
-    :store-label="editStoreLabel"
-    :saving="store.saving"
-    @apply="saveEdit"
-    @open-store-picker="openEditStorePicker"
-  />
+  <EditItemDialog v-model:visible="editState.visible" v-model:state="editState" :store-label="editStoreLabel"
+    :saving="store.saving" @apply="saveEdit" @open-store-picker="openEditStorePicker" />
 
-  <StorePickerSheet v-model:visible="ui.storePickerVisible" :stores="filteredStores" :modelValue="activeStoreValue || null"
-    @select="applyStoreSelection" @search="onStoreSearch" />
+  <StorePickerSheet v-model:visible="ui.storePickerVisible" :stores="filteredStores"
+    :modelValue="activeStoreValue || null" @select="applyStoreSelection" @search="onStoreSearch" />
 </template>

@@ -59,8 +59,7 @@ const openList = (id: string) => {
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-base-content">All Lists</h1>
-            <button type="button" class="btn btn-ghost text-primary font-semibold px-2"
-              @click="ui.isDialogOpen = true">
+            <button type="button" class="btn btn-ghost text-primary font-semibold px-2" @click="ui.isDialogOpen = true">
               New list
             </button>
           </div>
@@ -141,8 +140,7 @@ const openList = (id: string) => {
         <div
           class="input input-bordered flex items-center gap-2 focus-within:outline-none focus-within:ring-0 focus-within:border-b focus-within:border-base-300">
           <BookmarkIcon class="h-4 w-4 text-base-content/50" />
-          <input id="new-list-name" v-model.trim="form.listName" type="text" placeholder="List name"
-            autocomplete="off"
+          <input id="new-list-name" v-model.trim="form.listName" type="text" placeholder="List name" autocomplete="off"
             autofocus aria-label="List name" class="focus:outline-none focus:ring-0" @keyup.enter="createList" />
         </div>
         <button type="button" class="btn btn-primary" :disabled="!form.listName" @click="createList">

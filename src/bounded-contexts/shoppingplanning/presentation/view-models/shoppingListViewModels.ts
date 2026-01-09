@@ -15,17 +15,19 @@ export interface ShoppingListViewModel {
   items: ListItemViewModel[]
 }
 
+const getItemCount = (list: ShoppingList) => list.items.length
+
 export const toShoppingListSummaryViewModel = (
   list: ShoppingList,
 ): ShoppingListSummaryViewModel => ({
   id: list.id,
   name: list.name,
-  itemCount: list.items.length,
+  itemCount: getItemCount(list),
 })
 
 export const toShoppingListViewModel = (list: ShoppingList): ShoppingListViewModel => ({
   id: list.id,
   name: list.name,
-  itemCount: list.items.length,
+  itemCount: getItemCount(list),
   items: list.items.map((item) => ({ ...item })),
 })

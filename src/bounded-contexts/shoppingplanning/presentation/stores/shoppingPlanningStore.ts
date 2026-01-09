@@ -1,15 +1,13 @@
 import { defineStore } from 'pinia'
 import { shoppingPlanningModule } from '@/app/di/container'
+import { isOk } from '@/shared/kernel/result'
 import {
   toShoppingListSummaryViewModel,
   toShoppingListViewModel,
-} from '../view-models/shoppingListViewModels'
-import type {
-  ShoppingListSummaryViewModel,
-  ShoppingListViewModel,
+  type ShoppingListSummaryViewModel,
+  type ShoppingListViewModel,
 } from '../view-models/shoppingListViewModels'
 import type { SortingType } from '../../application/dtos/shoppingListDtos'
-import { isOk } from '@/shared/kernel/result'
 import type { ShoppingList } from '../../domain/entities/shoppingList'
 
 interface State {

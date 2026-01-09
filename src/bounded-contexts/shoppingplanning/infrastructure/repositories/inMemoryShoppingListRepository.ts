@@ -1,4 +1,6 @@
-import type { ListItem, ShoppingList } from '../../domain/entities/shoppingList'
+import { err, ok, type Result } from '@/shared/kernel/result'
+import { delay } from '@/shared/kernel/utils/delay'
+import { createId } from '@/shared/kernel/utils/ids'
 import {
   DuplicateListError,
   InvalidItemNameError,
@@ -6,14 +8,20 @@ import {
   ItemNotFoundError,
   ListNotFoundError,
 } from '../../domain/errors'
-import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
-import type { SortDirection, SortField } from '../../application/dtos/shoppingListDtos'
-import { delay } from '@/shared/kernel/utils/delay'
-import { createId } from '@/shared/kernel/utils/ids'
-import { err, ok, type Result } from '@/shared/kernel/result'
+import type { ListItem, ShoppingList } from '../../domain/entities/shoppingList'
+import type { SortField } from '../../application/dtos/shoppingListDtos'
+import type {
+  ShoppingListRepository,
+  SortInput,
+} from '../../ports/repositories/shoppingListRepository'
 import type { DomainError } from '@/shared/kernel/errors'
 
 type RepoResult<T = ShoppingList> = Promise<Result<T, DomainError>>
+
+const cloneList = (list: ShoppingList): ShoppingList => ({
+  ...list,
+  items: list.items.map((item) => ({ ...item })),
+})
 
 const seedLists: ShoppingList[] = [
   {
@@ -37,8 +45,9 @@ const seedLists: ShoppingList[] = [
   },
 ]
 
-let lists: ShoppingList[] = seedLists.map((l) => cloneList(l))
+let lists: ShoppingList[] = seedLists.map((list) => cloneList(list))
 const simulateLatency = () => delay(150)
+const normalizeText = (value?: string) => value?.trim() ?? ''
 
 export class InMemoryShoppingListRepository implements ShoppingListRepository {
   async list(): RepoResult<ShoppingList[]> {
@@ -48,14 +57,14 @@ export class InMemoryShoppingListRepository implements ShoppingListRepository {
 
   async getById(id: string): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === id)
-    if (!list) return err(new ListNotFoundError(id))
-    return ok(cloneList(list))
+    const result = findListById(id)
+    if (!result.ok) return result
+    return ok(cloneList(result.value))
   }
 
   async create(name: string): RepoResult {
     await simulateLatency()
-    const trimmed = name.trim()
+    const trimmed = normalizeText(name)
     if (!trimmed) return err(new InvalidListNameError())
     if (lists.some((l) => l.name.toLowerCase() === trimmed.toLowerCase())) {
       return err(new DuplicateListError(trimmed))
@@ -67,39 +76,53 @@ export class InMemoryShoppingListRepository implements ShoppingListRepository {
 
   async addItem(listId: string, item: Omit<ListItem, 'id'>): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === listId)
-    if (!list) return err(new ListNotFoundError(listId))
-    const name = item.productRef.trim()
+    const result = findListById(listId)
+    if (!result.ok) return result
+    const list = result.value
+    const name = normalizeText(item.productRef)
     if (!name) return err(new InvalidItemNameError())
-    const newItem: ListItem = { ...item, id: createId(), productRef: name, status: item.status ?? 'planned' }
+    const newItem: ListItem = {
+      ...item,
+      id: createId(),
+      productRef: name,
+      status: item.status ?? 'planned',
+    }
     list.items.push(newItem)
     return ok(cloneList(list))
   }
 
-  async updateItem(listId: string, itemId: string, update: Partial<Omit<ListItem, 'id'>>): RepoResult {
+  async updateItem(
+    listId: string,
+    itemId: string,
+    update: Partial<Omit<ListItem, 'id'>>,
+  ): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === listId)
-    if (!list) return err(new ListNotFoundError(listId))
-    const item = list.items.find((i) => i.id === itemId)
-    if (!item) return err(new ItemNotFoundError(itemId))
+    const listResult = findListById(listId)
+    if (!listResult.ok) return listResult
+    const list = listResult.value
+    const itemResult = findItemById(list, itemId)
+    if (!itemResult.ok) return itemResult
+    const item = itemResult.value
     if (update.productRef !== undefined) {
-      const name = update.productRef.trim()
+      const name = normalizeText(update.productRef)
       if (!name) return err(new InvalidItemNameError())
       item.productRef = name
     }
     if (update.quantity !== undefined) item.quantity = update.quantity
-    if (update.status !== undefined) item.status = update.status as any
-    if (update.note !== undefined) item.note = update.note?.trim() || undefined
-    if (update.storeRef !== undefined) item.storeRef = update.storeRef?.trim() || undefined
+    if (update.status !== undefined) item.status = update.status
+    if (update.note !== undefined) item.note = normalizeText(update.note) || undefined
+    if (update.storeRef !== undefined) item.storeRef = normalizeText(update.storeRef) || undefined
     return ok(cloneList(list))
   }
 
   async changeItemQuantity(listId: string, itemId: string, delta: number): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === listId)
-    if (!list) return err(new ListNotFoundError(listId))
-    const item = list.items.find((i) => i.id === itemId)
-    if (!item) return err(new ItemNotFoundError(itemId))
+    const listResult = findListById(listId)
+    if (!listResult.ok) return listResult
+    const list = listResult.value
+    const itemResult = findItemById(list, itemId)
+    if (!itemResult.ok) return itemResult
+    const item = itemResult.value
     const next = item.quantity + delta
     if (next <= 0) {
       list.items = list.items.filter((i) => i.id !== itemId)
@@ -111,30 +134,30 @@ export class InMemoryShoppingListRepository implements ShoppingListRepository {
 
   async removeItem(listId: string, itemId: string): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === listId)
-    if (!list) return err(new ListNotFoundError(listId))
-    const idx = list.items.findIndex((i) => i.id === itemId)
-    if (idx === -1) return err(new ItemNotFoundError(itemId))
-    list.items.splice(idx, 1)
+    const listResult = findListById(listId)
+    if (!listResult.ok) return listResult
+    const list = listResult.value
+    const itemIndex = list.items.findIndex((i) => i.id === itemId)
+    if (itemIndex === -1) return err(new ItemNotFoundError(itemId))
+    list.items.splice(itemIndex, 1)
     return ok(cloneList(list))
   }
 
-  async sortItems(
-    listId: string,
-    sort: { field: SortField; direction: SortDirection },
-  ): RepoResult {
+  async sortItems(listId: string, sort: SortInput): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === listId)
-    if (!list) return err(new ListNotFoundError(listId))
+    const listResult = findListById(listId)
+    if (!listResult.ok) return listResult
+    const list = listResult.value
     const multiplier = sort.direction === 'desc' ? -1 : 1
-    list.items.sort((a, b) => compare(sort.field, a, b) * multiplier)
+    list.items.sort((a, b) => compareItems(sort.field, a, b) * multiplier)
     return ok(cloneList(list))
   }
 
   async duplicate(listId: string): RepoResult {
     await simulateLatency()
-    const list = lists.find((l) => l.id === listId)
-    if (!list) return err(new ListNotFoundError(listId))
+    const listResult = findListById(listId)
+    if (!listResult.ok) return listResult
+    const list = listResult.value
     const copy: ShoppingList = {
       id: createId(),
       name: `${list.name} Copy`,
@@ -145,7 +168,7 @@ export class InMemoryShoppingListRepository implements ShoppingListRepository {
   }
 }
 
-function compare(field: SortField, a: ListItem, b: ListItem) {
+const compareItems = (field: SortField, a: ListItem, b: ListItem) => {
   switch (field) {
     case 'productRef':
       return a.productRef.localeCompare(b.productRef)
@@ -157,6 +180,14 @@ function compare(field: SortField, a: ListItem, b: ListItem) {
   }
 }
 
-function cloneList(list: ShoppingList): ShoppingList {
-  return { ...list, items: list.items.map((i) => ({ ...i })) }
+const findListById = (listId: string): Result<ShoppingList, DomainError> => {
+  const list = lists.find((l) => l.id === listId)
+  if (!list) return err(new ListNotFoundError(listId))
+  return ok(list)
+}
+
+const findItemById = (list: ShoppingList, itemId: string): Result<ListItem, DomainError> => {
+  const item = list.items.find((i) => i.id === itemId)
+  if (!item) return err(new ItemNotFoundError(itemId))
+  return ok(item)
 }

@@ -1,9 +1,11 @@
-import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
-import type { ShoppingList, ListItem } from '../../domain/entities/shoppingList'
-import type { SortDirection, SortField } from '../../application/dtos/shoppingListDtos'
 import { err, ok, type Result } from '@/shared/kernel/result'
 import { DomainError, ValidationError } from '@/shared/kernel/errors'
 import { ItemNotFoundError, ListNotFoundError } from '../../domain/errors'
+import type {
+  ShoppingListRepository,
+  SortInput,
+} from '../../ports/repositories/shoppingListRepository'
+import type { ListItem, ShoppingList } from '../../domain/entities/shoppingList'
 
 type RepoResult<T = ShoppingList> = Promise<Result<T, DomainError>>
 
@@ -22,12 +24,13 @@ type ApiList = {
   items: ApiListItem[]
 }
 
-const defaultBaseUrl = 'http://localhost:8080/api/shoppingplanning'
+const DEFAULT_BASE_URL = 'http://localhost:8080/api/shoppingplanning'
+const DEFAULT_MODULE_PATH = '/shoppingplanning'
 
 export class HttpShoppingListRepository implements ShoppingListRepository {
   private readonly baseUrl: string
 
-  constructor(baseUrl: string = defaultBaseUrl, moduleBasePath: string = '/shoppingplanning') {
+  constructor(baseUrl: string = DEFAULT_BASE_URL, moduleBasePath: string = DEFAULT_MODULE_PATH) {
     this.baseUrl = baseUrl + moduleBasePath
   }
 
@@ -47,10 +50,7 @@ export class HttpShoppingListRepository implements ShoppingListRepository {
       return ok(data as T)
     }
 
-    const errorMessage =
-      typeof data === 'object' && data !== null && 'error' in data
-        ? String((data as { error?: unknown }).error)
-        : undefined
+    const errorMessage = this.getErrorMessage(data)
     const message = errorMessage || response.statusText || 'Request failed'
     let error: DomainError
     if (response.status === 404) {
@@ -64,6 +64,11 @@ export class HttpShoppingListRepository implements ShoppingListRepository {
     }
 
     return err(error)
+  }
+
+  private getErrorMessage(data: unknown): string | undefined {
+    if (typeof data !== 'object' || data === null || !('error' in data)) return undefined
+    return String((data as { error?: unknown }).error)
   }
 
   private mapList(response: ApiList): ShoppingList {
@@ -111,16 +116,17 @@ export class HttpShoppingListRepository implements ShoppingListRepository {
   }
 
   async addItem(listId: string, item: Omit<ListItem, 'id'>): RepoResult {
+    const payload = {
+      productRef: item.productRef,
+      quantity: item.quantity,
+      status: item.status,
+      note: item.note,
+      storeRef: item.storeRef,
+    }
     const res = await fetch(this.url(`/lists/${listId}/items`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productRef: item.productRef,
-        quantity: item.quantity,
-        status: item.status,
-        note: item.note,
-        storeRef: item.storeRef,
-      }),
+      body: JSON.stringify(payload),
     })
     const parsed = await this.handleResponse<ApiList>(res)
     if (!parsed.ok) return parsed
@@ -132,16 +138,17 @@ export class HttpShoppingListRepository implements ShoppingListRepository {
     itemId: string,
     update: Partial<Omit<ListItem, 'id'>>,
   ): RepoResult {
+    const payload = {
+      productRef: update.productRef,
+      quantity: update.quantity,
+      status: update.status,
+      note: update.note,
+      storeRef: update.storeRef,
+    }
     const res = await fetch(this.url(`/lists/${listId}/items/${itemId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productRef: update.productRef,
-        quantity: update.quantity,
-        status: update.status,
-        note: update.note,
-        storeRef: update.storeRef,
-      }),
+      body: JSON.stringify(payload),
     })
     const parsed = await this.handleResponse<ApiList>(res)
     if (!parsed.ok) return parsed
@@ -173,14 +180,12 @@ export class HttpShoppingListRepository implements ShoppingListRepository {
     return ok(this.mapList(parsed.value))
   }
 
-  async sortItems(
-    listId: string,
-    sort: { field: SortField; direction: SortDirection },
-  ): RepoResult {
+  async sortItems(listId: string, sort: SortInput): RepoResult {
+    const payload = { field: sort.field, direction: sort.direction }
     const res = await fetch(this.url(`/lists/${listId}/items-order/sort`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field: sort.field, direction: sort.direction }),
+      body: JSON.stringify(payload),
     })
     const parsed = await this.handleResponse<ApiList>(res)
     if (!parsed.ok) return parsed

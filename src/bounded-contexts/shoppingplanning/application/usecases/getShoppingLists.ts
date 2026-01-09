@@ -1,5 +1,5 @@
-import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
 import type { ShoppingList } from '../../domain/entities/shoppingList'
+import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
 import type { Result } from '@/shared/kernel/result'
 
 export class GetShoppingLists {

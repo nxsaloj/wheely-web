@@ -1,7 +1,7 @@
 import type { ListItem, ShoppingList } from '../../domain/entities/shoppingList'
 
-export type SortField = 'productRef' | 'quantity' | 'status'
 export type SortDirection = 'asc' | 'desc'
+export type SortField = 'productRef' | 'quantity' | 'status'
 
 export type SortingType = {
   field: SortField
@@ -58,9 +58,11 @@ export type SortItemsInput = {
   direction: SortDirection
 }
 
+const getItemCount = (list: ShoppingList) => list.items.length
+
 export const mapShoppingListToDTO = (list: ShoppingList): ShoppingListDetailsDTO => ({
   id: list.id,
   name: list.name,
-  itemCount: list.items.length,
+  itemCount: getItemCount(list),
   items: list.items,
 })

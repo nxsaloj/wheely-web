@@ -1,9 +1,11 @@
-import type { PlannedItemStatus, ShoppingList } from '../../domain/entities/shoppingList'
-import type { AddItemInput } from '../dtos/shoppingListDtos'
-import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
+import { err } from '@/shared/kernel/result'
 import type { Result } from '@/shared/kernel/result'
 import { InvalidItemNameError } from '../../domain/errors'
-import { err } from '@/shared/kernel/result'
+import type { PlannedItemStatus, ShoppingList } from '../../domain/entities/shoppingList'
+import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
+import type { AddItemInput } from '../dtos/shoppingListDtos'
+
+const normalizeText = (value?: string) => value?.trim()
 
 export class AddItemToList {
   private readonly repository: ShoppingListRepository
@@ -13,19 +15,19 @@ export class AddItemToList {
   }
 
   async execute(input: AddItemInput): Promise<Result<ShoppingList>> {
-    const productRef = input.productRef?.trim() ?? ''
+    const productRef = normalizeText(input.productRef) ?? ''
     if (!productRef) {
       return err(new InvalidItemNameError())
     }
 
-    const status: PlannedItemStatus = (input.status as PlannedItemStatus) ?? 'planned'
+    const status: PlannedItemStatus = (input.status as PlannedItemStatus | undefined) ?? 'planned'
 
     return this.repository.addItem(input.listId, {
       productRef,
       quantity: input.quantity ?? 1,
       status,
-      storeRef: input.storeRef?.trim(),
-      note: input.note?.trim(),
+      storeRef: normalizeText(input.storeRef),
+      note: normalizeText(input.note),
     })
   }
 }

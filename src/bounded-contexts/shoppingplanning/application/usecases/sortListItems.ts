@@ -11,9 +11,10 @@ export class SortListItems {
   }
 
   execute(input: SortItemsInput): Promise<Result<ShoppingList>> {
-    return this.repository.sortItems(input.listId, {
-      field: input.field,
-      direction: input.direction,
+    const { listId, field, direction } = input
+    return this.repository.sortItems(listId, {
+      field,
+      direction,
     })
   }
 }

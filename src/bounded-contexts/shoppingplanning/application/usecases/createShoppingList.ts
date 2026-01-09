@@ -1,9 +1,11 @@
+import { err } from '@/shared/kernel/result'
 import { InvalidListNameError } from '../../domain/errors'
 import type { ShoppingList } from '../../domain/entities/shoppingList'
 import type { ShoppingListRepository } from '../../ports/repositories/shoppingListRepository'
 import type { CreateShoppingListInput } from '../dtos/shoppingListDtos'
 import type { Result } from '@/shared/kernel/result'
-import { err } from '@/shared/kernel/result'
+
+const normalizeText = (value?: string) => value?.trim() ?? ''
 
 export class CreateShoppingList {
   private readonly repository: ShoppingListRepository
@@ -13,7 +15,7 @@ export class CreateShoppingList {
   }
 
   async execute(input: CreateShoppingListInput): Promise<Result<ShoppingList>> {
-    const name = input.name?.trim() ?? ''
+    const name = normalizeText(input.name)
     if (!name) {
       return err(new InvalidListNameError())
     }

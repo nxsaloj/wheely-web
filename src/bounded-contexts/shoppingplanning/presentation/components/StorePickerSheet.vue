@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import StorePickerItem from './StorePickerItem.vue'
-import {
-  MagnifyingGlassIcon,
-  XMarkIcon,
-} from '@heroicons/vue/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
 export interface StoreOption {
   id: string
@@ -26,16 +23,17 @@ const emit = defineEmits<{
   (e: 'search', value: string): void
 }>()
 
-const selectStore = (storeId: string | null) => {
+const close = () => emit('update:visible', false)
+
+const handleSelect = (storeId: string | null) => {
   emit('select', storeId)
   emit('update:visible', false)
 }
-const onSearch = (event: Event) => {
+
+const handleSearch = (event: Event) => {
   const value = (event.target as HTMLInputElement)?.value ?? ''
   emit('search', value)
 }
-
-const close = () => emit('update:visible', false)
 </script>
 
 <template>
@@ -54,16 +52,17 @@ const close = () => emit('update:visible', false)
         <p class="text-lg font-semibold">Select Store</p>
       </div>
 
+      <label for="search-stores" class="sr-only">Search stores</label>
       <div
         class="input w-full border border h-12 max-h-12 flex items-center gap-2 focus-within:border-slate-300 focus-within:ring-0 focus-within:shadow-none">
         <MagnifyingGlassIcon class="h-5 w-5 text-base-content/50" />
         <input id="search-stores" placeholder="Search stores..." class="grow focus:outline-none focus:ring-0"
-          aria-label="Search stores" @input="onSearch" />
+          aria-label="Search stores" @input="handleSearch" />
       </div>
 
       <button type="button"
         class="btn btn-ghost w-full justify-start gap-3 rounded-2xl text-error border-none hover:border-none hover:bg-error/5 active:bg-error/15 shadow-none hover:shadow-none pt-7 pb-7 px-1"
-        @click="selectStore(null)">
+        @click="handleSelect(null)">
         <span class="grid h-8 w-8 place-items-center rounded-full bg-error/20 text-error" aria-hidden="true">
           <XMarkIcon class="h-4 w-4" />
         </span>
@@ -78,7 +77,7 @@ const close = () => emit('update:visible', false)
       <div class="relative grid min-h-0 flex-1 gap-1 overflow-y-auto pr-1">
         <button v-for="store in props.stores" :key="store.id" type="button"
           class="flex items-center justify-between h-20 rounded-2xl hover:bg-base-200 px-4 py-3"
-          :aria-pressed="props.modelValue === store.id" @click="selectStore(store.id)">
+          :aria-pressed="props.modelValue === store.id" @click="handleSelect(store.id)">
           <StorePickerItem :store="store" :selected="props.modelValue === store.id" />
         </button>
         <div v-if="!props.stores.length"

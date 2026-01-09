@@ -17,12 +17,19 @@ defineProps<{ id?: string }>()
 const route = useRoute()
 const router = useRouter()
 const store = useShoppingPlanningStore()
-const storeSearch = ref('')
-const storeSelection = reactive<{ itemId: string | null }>({ itemId: null })
-const storePickerVisible = ref(false)
-const storeSelectionContext = ref<'add' | 'item' | 'edit'>('add')
 
-const addItemForm = reactive({
+const ui = reactive({
+  storePickerVisible: false,
+})
+
+const storePicker = reactive({
+  context: 'add' as 'add' | 'item' | 'edit',
+  itemId: null as string | null,
+})
+
+const storeSearchQuery = ref('')
+
+const addForm = reactive({
   storeRef: '',
 })
 
@@ -39,14 +46,14 @@ const editState = reactive({
 const selectedList = computed(() => store.selectedList)
 const items = computed(() => selectedList.value?.items ?? [])
 const selectedStoreRef = computed(() => {
-  if (!storeSelection.itemId) return ''
-  const item = items.value.find((i) => i.id === storeSelection.itemId)
+  if (!storePicker.itemId) return ''
+  const item = items.value.find((i) => i.id === storePicker.itemId)
   return item?.storeRef ?? ''
 })
 const activeStoreValue = computed(() => {
-  if (storeSelectionContext.value === 'item') return selectedStoreRef.value
-  if (storeSelectionContext.value === 'edit') return editState.storeRef
-  return addItemForm.storeRef
+  if (storePicker.context === 'item') return selectedStoreRef.value
+  if (storePicker.context === 'edit') return editState.storeRef
+  return addForm.storeRef
 })
 const storeOptions = ref<StoreOption[]>([
   {
@@ -110,14 +117,13 @@ const storeOptions = ref<StoreOption[]>([
     imageUrl: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=60&q=60',
   },
 ])
-const storeSearchFilter = ref('')
 const addComposerRef = ref<InstanceType<typeof AddItemComposer> | null>(null)
 
-const filterTerm = computed(() => (storeSearchFilter.value || storeSearch.value || '').toLowerCase().trim())
+const storeSearchTerm = computed(() => storeSearchQuery.value.toLowerCase().trim())
 
 const filteredStores = computed(() => {
-  if (!filterTerm.value) return storeOptions.value
-  return storeOptions.value.filter((s) => s.name.toLowerCase().includes(filterTerm.value))
+  if (!storeSearchTerm.value) return storeOptions.value
+  return storeOptions.value.filter((s) => s.name.toLowerCase().includes(storeSearchTerm.value))
 })
 
 const editStoreLabel = computed(
@@ -232,58 +238,56 @@ const changeSort = async (sort: SortingType) => {
 
 const goBack = () => router.push({ name: 'shopping-lists' })
 
-
-const openStorePanel = (_event: Event, itemId: string) => {
-  storeSelectionContext.value = 'item'
-  storeSelection.itemId = itemId
-  storeSearch.value = ''
-  storeSearchFilter.value = ''
-  storePickerVisible.value = true
+const openItemStorePicker = (_event: Event, itemId: string) => {
+  storePicker.context = 'item'
+  storePicker.itemId = itemId
+  storeSearchQuery.value = ''
+  ui.storePickerVisible = true
 }
 
-const applyStore = async (storeId: string | null) => {
-  if (!selectedList.value || !storeSelection.itemId) return
+const applyItemStoreSelection = async (storeId: string | null) => {
+  if (!selectedList.value || !storePicker.itemId) return
   await store.updateItem({
     listId: selectedList.value.id,
-    itemId: storeSelection.itemId,
+    itemId: storePicker.itemId,
     storeRef: storeId ?? '',
   })
-  storePickerVisible.value = false
-  storeSelection.itemId = null
+  ui.storePickerVisible = false
+  storePicker.itemId = null
 }
 
 const onItemStoreClick = (event: Event, itemId: string) => {
-  openStorePanel(event, itemId)
+  openItemStorePicker(event, itemId)
 }
 
-const openStorePicker = () => {
-  storeSelectionContext.value = 'add'
-  storeSelection.itemId = null
-  storeSearchFilter.value = ''
-  storePickerVisible.value = true
+const openAddStorePicker = () => {
+  storePicker.context = 'add'
+  storePicker.itemId = null
+  storeSearchQuery.value = ''
+  ui.storePickerVisible = true
 }
 
 const applyStoreSelection = (storeId: string | null) => {
-  if (storeSelectionContext.value === 'item') {
-    applyStore(storeId)
-  } else if (storeSelectionContext.value === 'edit') {
+  if (storePicker.context === 'item') {
+    applyItemStoreSelection(storeId)
+  } else if (storePicker.context === 'edit') {
     editState.storeRef = storeId ?? ''
-    storePickerVisible.value = false
+    ui.storePickerVisible = false
   } else {
-    addItemForm.storeRef = storeId || ''
-    storePickerVisible.value = false
+    addForm.storeRef = storeId || ''
+    ui.storePickerVisible = false
   }
 }
 
 const onStoreSearch = (value: string) => {
-  storeSearchFilter.value = value
+  storeSearchQuery.value = value
 }
 
 const openEditStorePicker = () => {
-  storeSelectionContext.value = 'edit'
-  storeSelection.itemId = null
-  storeSearchFilter.value = ''
-  storePickerVisible.value = true
+  storePicker.context = 'edit'
+  storePicker.itemId = null
+  storeSearchQuery.value = ''
+  ui.storePickerVisible = true
 }
 
 </script>
@@ -310,8 +314,8 @@ const openEditStorePicker = () => {
       {{ store.error }}
     </div>
 
-    <AddItemComposer ref="addComposerRef" :pending-store="addItemForm.storeRef || ''" :stores="storeOptions"
-      @add="(payload) => submitAddItem(payload)" @open-store-picker="openStorePicker" />
+    <AddItemComposer ref="addComposerRef" :pending-store="addForm.storeRef || ''" :stores="storeOptions"
+      @add="(payload) => submitAddItem(payload)" @open-store-picker="openAddStorePicker" />
 
     <div class="space-y-6">
       <template v-for="group in groupedItems" :key="group.key">
@@ -349,6 +353,6 @@ const openEditStorePicker = () => {
     @open-store-picker="openEditStorePicker"
   />
 
-  <StorePickerSheet v-model:visible="storePickerVisible" :stores="filteredStores" :modelValue="activeStoreValue || null"
+  <StorePickerSheet v-model:visible="ui.storePickerVisible" :stores="filteredStores" :modelValue="activeStoreValue || null"
     @select="applyStoreSelection" @search="onStoreSearch" />
 </template>

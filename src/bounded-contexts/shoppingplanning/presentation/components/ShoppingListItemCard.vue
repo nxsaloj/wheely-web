@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, reactive } from 'vue'
 import type { ListItemViewModel } from '../view-models/shoppingListViewModels'
 import QuantityStepper from './QuantityStepper.vue'
 import { EllipsisVerticalIcon } from '@heroicons/vue/24/solid'
@@ -16,17 +16,28 @@ const emit = defineEmits<{
   (e: 'toggleStatus'): void
 }>()
 
-const menuOpen = ref(false)
+const ui = reactive({
+  menuOpen: false,
+})
+
+const statusLabel = computed(() =>
+  props.item.status.charAt(0).toUpperCase() + props.item.status.slice(1),
+)
+const isPlanned = computed(() => props.item.status === 'planned')
+
 const toggleMenu = () => {
-  menuOpen.value = !menuOpen.value
+  ui.menuOpen = !ui.menuOpen
+}
+const closeMenu = () => {
+  ui.menuOpen = false
 }
 const handleEdit = () => {
   emit('edit')
-  menuOpen.value = false
+  closeMenu()
 }
 const handleRemove = () => {
   emit('remove')
-  menuOpen.value = false
+  closeMenu()
 }
 </script>
 
@@ -35,10 +46,10 @@ const handleRemove = () => {
     <div class="grid gap-2">
       <span class="text-base font-semibold text-base-content">{{ props.item.productRef }}</span>
       <div class="flex flex-wrap gap-2">
-        <button type="button" class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="props.item.status === 'planned'
+        <button type="button" class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="isPlanned
           ? 'bg-success/15 text-success/90'
           : 'bg-base-300/50 text-base-content/50 hover:bg-base-300/50'" @click="emit('toggleStatus')">
-          {{ props.item.status.charAt(0).toUpperCase() + props.item.status.slice(1) }}
+          {{ statusLabel }}
         </button>
         <button v-if="props.item.storeRef" type="button"
           class="rounded-full bg-base-300/50 px-2.5 py-1 text-xs font-semibold text-base-content/60"
@@ -61,7 +72,7 @@ const handleRemove = () => {
           @click="toggleMenu">
           <EllipsisVerticalIcon class="h-5 w-5" />
         </button>
-        <ul v-if="menuOpen" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-36 mt-2">
+        <ul v-if="ui.menuOpen" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-36 mt-2">
           <li><button type="button" @click="handleEdit">Edit</button></li>
           <li><button type="button" class="text-error" @click="handleRemove">Remove</button></li>
         </ul>

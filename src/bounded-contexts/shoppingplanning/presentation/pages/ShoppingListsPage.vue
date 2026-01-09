@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ArrowRightIcon,
@@ -13,10 +13,16 @@ import { useShoppingPlanningStore } from '../stores/shoppingPlanningStore'
 
 const router = useRouter()
 const store = useShoppingPlanningStore()
-const showDialog = ref(false)
-const newListName = ref('')
 
-const loading = computed(() => store.loadingLists)
+const ui = reactive({
+  isDialogOpen: false,
+})
+
+const form = reactive({
+  listName: '',
+})
+
+const isLoading = computed(() => store.loadingLists)
 const lists = computed(() => store.lists)
 const pinnedLists = computed(() => lists.value.slice(0, Math.min(2, lists.value.length)))
 const otherLists = computed(() => lists.value.slice(pinnedLists.value.length))
@@ -26,11 +32,11 @@ onMounted(() => {
 })
 
 const createList = async () => {
-  if (!newListName.value.trim()) return
-  const success = await store.createList(newListName.value)
+  if (!form.listName.trim()) return
+  const success = await store.createList(form.listName)
   if (success) {
-    newListName.value = ''
-    showDialog.value = false
+    form.listName = ''
+    ui.isDialogOpen = false
   }
 }
 
@@ -53,10 +59,12 @@ const openList = (id: string) => {
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-base-content">All Lists</h1>
-            <button type="button" class="btn btn-ghost text-primary font-semibold px-2" @click="showDialog = true">
+            <button type="button" class="btn btn-ghost text-primary font-semibold px-2"
+              @click="ui.isDialogOpen = true">
               New list
             </button>
           </div>
+          <label for="search-lists" class="sr-only">Search lists</label>
           <div
             class="input border border-slate-200 flex items-center gap-2 focus-within:ring-0 focus-within:shadow-none">
             <MagnifyingGlassIcon class="h-5 w-5 text-base-content/50" />
@@ -92,7 +100,7 @@ const openList = (id: string) => {
 
         <div class="space-y-2">
           <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50">Others</div>
-          <div v-if="loading" class="text-base-content/60 text-sm">Loading lists...</div>
+          <div v-if="isLoading" class="text-base-content/60 text-sm">Loading lists...</div>
           <div v-else-if="!store.hasLists" class="text-base-content/60 text-sm">No lists yet. Create your first one.
           </div>
           <div v-else class="grid gap-3 md:grid-cols-2">
@@ -114,28 +122,30 @@ const openList = (id: string) => {
       </div>
 
       <div class="flex justify-end">
-        <button type="button" class="btn btn-success btn-circle shadow-lg" @click="showDialog = true">
+        <button type="button" class="btn btn-success btn-circle shadow-lg" @click="ui.isDialogOpen = true">
           <PlusIcon class="h-6 w-6" />
         </button>
       </div>
     </div>
   </section>
 
-  <div v-if="showDialog" class="fixed inset-0 z-50 grid place-items-center">
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showDialog = false" />
+  <div v-if="ui.isDialogOpen" class="fixed inset-0 z-50 grid place-items-center">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="ui.isDialogOpen = false" />
     <div class="relative z-10 w-full max-w-md rounded-xl bg-base-100 p-5 shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
         <h3 class="m-0 text-lg font-semibold">Create shopping list</h3>
-        <button type="button" class="btn btn-ghost btn-sm" @click="showDialog = false">Close</button>
+        <button type="button" class="btn btn-ghost btn-sm" @click="ui.isDialogOpen = false">Close</button>
       </div>
       <div class="grid grid-cols-[1fr,auto] gap-3 items-center">
+        <label for="new-list-name" class="sr-only">List name</label>
         <div
           class="input input-bordered flex items-center gap-2 focus-within:outline-none focus-within:ring-0 focus-within:border-b focus-within:border-base-300">
           <BookmarkIcon class="h-4 w-4 text-base-content/50" />
-          <input id="new-list-name" v-model.trim="newListName" type="text" placeholder="List name" autocomplete="off"
+          <input id="new-list-name" v-model.trim="form.listName" type="text" placeholder="List name"
+            autocomplete="off"
             autofocus aria-label="List name" class="focus:outline-none focus:ring-0" @keyup.enter="createList" />
         </div>
-        <button type="button" class="btn btn-primary" :disabled="!newListName" @click="createList">
+        <button type="button" class="btn btn-primary" :disabled="!form.listName" @click="createList">
           Create
         </button>
       </div>

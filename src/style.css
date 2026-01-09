@@ -36,41 +36,38 @@
   --noise: 0;
 }
 
-:root {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #1f2937;
-  background: radial-gradient(circle at 10% 20%, #f5f9ff 0, #f3f4f6 30%, #eef2ff 70%);
-  min-height: 100%;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
 body {
-  margin: 0;
-  min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Use theme tokens for input borders and focus. */
-.input.input-bordered {
-  border-color: hsl(var(--b3));
-}
-.input.input-bordered:focus,
-.input.input-bordered:focus-within,
-.input:focus-within,
-.input:focus {
-  border-color: hsl(var(--bc) / 0.35) !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
+@layer base {
+  .input:focus,
+  .input:focus-within {
+    --input-color: var(--color-slate-300) !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
 
-/* Shared bottom-border focus style for flat inputs. */
-.focus-border-bottom:focus {
-  border-bottom-color: hsl(var(--b3));
+  .input.input-bordered {
+    border-color: var(--color-base-300);
+  }
+
+  .input.input-bordered:focus,
+  .input.input-bordered:focus-within,
+  .input:focus-within,
+  .input:focus {
+    border-color: var(--color-slate-300) !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  .input :where(input):focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Shared bottom-border focus style for flat inputs. */
+  .focus-border-bottom:focus {
+    border-bottom-color: var(--color-base-300);
+  }
 }

@@ -14,3 +14,5 @@ export interface ShoppingList {
   name: string
   items: ListItem[]
 }
+
+export const getListItemCount = (list: ShoppingList) => list.items.length
